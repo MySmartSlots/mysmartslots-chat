@@ -1,6 +1,7 @@
 import express from "express";
 import cors from "cors";
 import Anthropic from "@anthropic-ai/sdk";
+import nodemailer from "nodemailer";
 
 const app = express();
 const client = new Anthropic(); // reads ANTHROPIC_API_KEY from environment
@@ -12,6 +13,31 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 app.use(express.json());
 app.use(cors());
 app.use(express.static(__dirname));
+
+// --- Email transporter (Gmail) ---
+const transporter = nodemailer.createTransport({
+  service: "gmail",
+  auth: {
+    user: process.env.GMAIL_USER,   // add to Render env vars: audit@mysmartslots.com
+    pass: process.env.GMAIL_PASS,   // add to Render env vars: your Gmail app password
+  },
+});
+
+async function sendBookingEmail(booking) {
+  await transporter.sendMail({
+    from: process.env.GMAIL_USER,
+    to: "audit@mysmartslots.com",
+    subject: "🔔 New Booking Lead — My Smart Slots",
+    html: `
+      <h2>New Booking Request</h2>
+      <p><strong>Name:</strong> ${booking.name || "—"}</p>
+      <p><strong>Contact:</strong> ${booking.contact || "—"}</p>
+      <p><strong>Service:</strong> ${booking.service || "—"}</p>
+      <p><strong>Requested Time:</strong> ${booking.datetime || "—"}</p>
+    `,
+  });
+}
+
 const SYSTEM_PROMPT = `You are a friendly booking assistant for a local service business using MySmartSlots. Your job is to help website visitors:
 
 1. Answer FAQs about the business (services, pricing, hours, location)
@@ -37,7 +63,7 @@ app.post("/chat", async (req, res) => {
 
   try {
     const response = await client.messages.create({
-     model: "claude-sonnet-4-6",
+      model: "claude-haiku-4-5-20251001",
       max_tokens: 300,
       system: SYSTEM_PROMPT,
       messages,
@@ -49,9 +75,18 @@ app.post("/chat", async (req, res) => {
     const bookingMatch = text.match(/\[BOOKING_READY:([^\]]+)\]/);
     const booking = bookingMatch ? parseBooking(bookingMatch[1]) : null;
 
+    // Send email notification if booking details collected
+    if (booking) {
+      try {
+        await sendBookingEmail(booking);
+      } catch (emailErr) {
+        console.error("Email send error:", emailErr);
+      }
+    }
+
     res.json({
       reply: text.replace(/\[BOOKING_READY:[^\]]+\]/, "").trim(),
-      booking, // null unless all details collected
+      booking,
     });
   } catch (err) {
     console.error("Anthropic error:", err);
