@@ -5,9 +5,13 @@ import Anthropic from "@anthropic-ai/sdk";
 const app = express();
 const client = new Anthropic(); // reads ANTHROPIC_API_KEY from environment
 
-app.use(express.json());
-app.use(cors()); // restrict to your client's domain in production
+import { fileURLToPath } from "url";
+import path from "path";
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
+app.use(express.json());
+app.use(cors());
+app.use(express.static(__dirname));
 const SYSTEM_PROMPT = `You are a friendly booking assistant for a local service business using MySmartSlots. Your job is to help website visitors:
 
 1. Answer FAQs about the business (services, pricing, hours, location)
