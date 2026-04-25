@@ -109,34 +109,6 @@ STILL COLLECT THESE FOUR THINGS IF THEY DON'T BOOK VIA CALENDLY:
 When you have all four AND they have not booked via Calendly, end your message with this exact tag:
 [BOOKING_READY: name=<n>, contact=<contact>, service=<trade>, datetime=<datetime>]`;
 
-app.use(express.json());
-app.use(cors());
-app.use(express.static(__dirname));
-
-// --- Email transporter (Gmail) ---
-const transporter = nodemailer.createTransport({
-  service: "gmail",
-  auth: {
-    user: process.env.GMAIL_USER,
-    pass: process.env.GMAIL_PASS,
-  },
-});
-
-async function sendBookingEmail(booking) {
-  await transporter.sendMail({
-    from: process.env.GMAIL_USER,
-    to: "audit@mysmartslots.com",
-    subject: "🔔 New Booking Lead — My Smart Slots",
-    html: `
-      <h2>New Booking Request</h2>
-      <p><strong>Name:</strong> ${booking.name || "—"}</p>
-      <p><strong>Contact:</strong> ${booking.contact || "—"}</p>
-      <p><strong>Service:</strong> ${booking.service || "—"}</p>
-      <p><strong>Requested Time:</strong> ${booking.datetime || "—"}</p>
-    `,
-  });
-}
-
 app.post("/chat", async (req, res) => {
   const { messages } = req.body;
 
